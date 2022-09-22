@@ -66,7 +66,7 @@ describe('locationCorrection', () => {
     expect(getSourceForNodeByRange(source, color)).toEqual('color: hotpink;');
   });
 
-  it.only('should handle multi-line CSS with expressions', () => {
+  it('should handle multi-line CSS with expressions', () => {
     const { source, ast } = createTestAst(`
       css\`
         .foo {
@@ -96,22 +96,22 @@ describe('locationCorrection', () => {
   });
 
   it('should handle single line expressions', () => {
-    const { source, ast } = createTestAst(`css\`.foo { color: hotpink; }\`;`);
+    const { source, ast } = createTestAst(`css\`.foo { color: \${expr}; }\`;`);
     const rule = (ast.nodes[0] as Root).nodes[0] as Rule;
     const color = rule.nodes[0] as Declaration;
     expect(color.type).toEqual('decl');
     expect(rule.type).toEqual('rule');
     expect(getSourceForNodeByLoc(source, rule)).toEqual(
-      '.foo { color: hotpink; }'
+      '.foo { color: ${expr}; }'
     );
-    expect(getSourceForNodeByLoc(source, color)).toEqual('color: hotpink;');
+    expect(getSourceForNodeByLoc(source, color)).toEqual('color: ${expr};');
     expect(getSourceForNodeByRange(source, rule)).toEqual(
-      '.foo { color: hotpink; }'
+      '.foo { color: ${expr}; }'
     );
-    expect(getSourceForNodeByRange(source, color)).toEqual('color: hotpink;');
+    expect(getSourceForNodeByRange(source, color)).toEqual('color: ${expr};');
   });
 
-  it('should account for single-line expressions', () => {
+  it('should handle multi-line CSS with value expression', () => {
     const { source, ast } = createTestAst(`
       css\`
         .foo {
@@ -134,7 +134,9 @@ describe('locationCorrection', () => {
           color: $\{expr1};
         }`
     );
-    expect(getSourceForNodeByRange(source, color)).toEqual('color: ${expr1};');
+    expect(getSourceForNodeByRange(source, color)).toEqual(
+      'color: ${expr1};\n'
+    );
   });
 
   it('should stringify a ruleset expression', () => {

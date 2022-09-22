@@ -9,12 +9,8 @@ const correctLocation = (
   loc: Position,
   baseIndentations: Map<number, number>,
   sourceAsString: string,
-  type: 'start' | 'end',
   prefixOffsets?: { lines: number; offset: number }
 ): Position => {
-  // console.log('here1', type, sourceAsString.substring(node?.start || 0, node.end || 0));
-  // console.log(node);
-  // console.log(node.tag.start)
   if (!node.quasi.loc || !node.quasi.range) {
     return loc;
   }
@@ -32,64 +28,10 @@ const correctLocation = (
     newOffset += prefixOffsets.offset;
   }
 
-  // let placeholderExpressionSizeDiff = 0;
-
-  // // console.log('here0', node.quasi.expressions, node.quasi.expressions.length, node.quasi.quasis.length)
-  // // console.log('here9', node.quasi.expressions.reduce((exp, val) => val + )
-
-  // console.log('here2', node.quasi.expressions);
-  // const lengthOfExpressions = node.quasi.expressions.reduce(
-  //   (sum, expr) => sum + (expr.end || 0) - (expr?.start || 0) + '${}'.length,
-  //   0
-  // )
-
-  // '${expr1}'.length;
-  let lengthOfExpressions = 0;
-  let lengthOfPlaceholders = 0;
-  for (let i = 0; i < node.quasi.expressions.length; i++) {
-    const expr = node.quasi.expressions[i];
-    console.log('expr9', expr);
-    if (expr.start && expr.end) {
-      lengthOfExpressions += expr.end - expr.start + '${}'.length;
-    }
-    const nextQuasi = node.quasi.quasis[i + 1];
-    if (nextQuasi && nextQuasi.range) {
-      console.log(createPlaceholder(
-        i,
-        sourceAsString,
-        nextQuasi.range[0]
-      ));
-      const placeholderSize = createPlaceholder(
-        i,
-        sourceAsString,
-        nextQuasi.range[0]
-      ).length;
-      lengthOfPlaceholders += placeholderSize;
-    }
-  }
-  console.log(lengthOfExpressions, lengthOfPlaceholders)
-  const placeholderOffset = lengthOfExpressions - lengthOfPlaceholders;
-
   for (let i = 0; i < node.quasi.expressions.length; i++) {
     const expr = node.quasi.expressions[i];
     const previousQuasi = node.quasi.quasis[i];
     const nextQuasi = node.quasi.quasis[i + 1];
-    console.log(expr, 'expr')
-    console.log(
-      'blah',
-      i,
-      !!expr,
-      !!expr.loc,
-      !!expr.range,
-      !!nextQuasi,
-      !!previousQuasi,
-      !!previousQuasi.loc,
-      !!nextQuasi.loc,
-      !!previousQuasi.range,
-      !!nextQuasi.range,
-      previousQuasi.range[1],
-      previousQuasi.range[1] < newOffset
-    );
 
     if (
       expr &&
@@ -103,16 +45,16 @@ const correctLocation = (
       nextQuasi.range &&
       previousQuasi.range[1] < newOffset
     ) {
-      // console.log('here6', previousQuasi.range[1], newOffset)
       const placeholderSize = createPlaceholder(
         i,
         sourceAsString,
         nextQuasi.range[0]
       ).length;
-      const exprSize = nextQuasi.range[0] - previousQuasi.range[1] - placeholderSize;
+      const exprSize =
+        nextQuasi.range[0] - previousQuasi.range[1] - placeholderSize;
       const exprStartLine = previousQuasi.loc.end.line;
       const exprEndLine = nextQuasi.loc.start.line;
-      // placeholderExpressionSizeDiff += exprSize - placeholderSize;
+      newOffset += exprSize;
       lineOffset += exprEndLine - exprStartLine;
 
       if (currentLine !== exprEndLine) {
@@ -144,14 +86,9 @@ const correctLocation = (
     loc.column += columnOffset;
   }
   loc.column += baseIndentation;
+
   loc.offset = newOffset + indentationOffset;
 
-  // console.log(placeholderExpressionSizeDiff);
-  console.log(placeholderOffset);
-  if (type === 'end') {
-    console.log(node);
-    loc.offset += placeholderOffset;
-  }
   return loc;
 };
 
@@ -333,15 +270,12 @@ export function locationCorrectionWalker(
       computeBeforeAfter(node, baseIndentations);
     }
 
-    console.log(node.source);
-
     if (node.source?.start) {
       node.source.start = correctLocation(
         expr,
         node.source.start,
         baseIndentations,
         sourceAsString,
-        'start',
         root.raws.linariaPrefixOffsets
       );
     }
@@ -351,7 +285,6 @@ export function locationCorrectionWalker(
         node.source.end,
         baseIndentations,
         sourceAsString,
-        'end',
         root.raws.linariaPrefixOffsets
       );
     }
