@@ -6,6 +6,7 @@ import { createTestAst, sourceWithExpression } from './__utils__';
 
 const {
   ruleset,
+  singleLineRuleset,
   selectorOrAtRule,
   selectorBeforeExpression,
   selectorAfterExpression,
@@ -23,6 +24,15 @@ describe('parse', () => {
       const root = ast.nodes[0] as Root;
       expect(root.source?.input.css).toMatchInlineSnapshot(`
         "  /* ${placeholderText}:0 */
+        "
+      `);
+    });
+
+    it('should parse a single line ruleset expression', () => {
+      const { ast } = createTestAst(singleLineRuleset);
+      const root = ast.nodes[0] as Root;
+      expect(root.source?.input.css).toMatchInlineSnapshot(`
+        "  .${placeholderText}0 { --${placeholderText}1: ${placeholderText}2 }
         "
       `);
     });
@@ -213,6 +223,56 @@ describe('parse', () => {
       const root = ast.nodes[0] as Root;
       expect(root.type).toEqual('root');
       expect(root.source!.input.css).toEqual('  color: hotpink;\n');
+    });
+
+    it('should parse styled api', () => {
+      const { source, ast } = createTestAst(`
+        const StyledSpan = styled.span\`
+          color: black;
+        \`;
+      `);
+      expect(ast.nodes.length).toEqual(1);
+      const root = ast.nodes[0] as Root;
+      const color = root.nodes[0] as Declaration;
+      expect(ast.type).toEqual('document');
+      expect(root.type).toEqual('root');
+      expect(color.type).toEqual('decl');
+      expect(root.raws.codeBefore).toEqual(
+        '\n        const StyledSpan = styled.span`\n'
+      );
+      expect(root.parent).toEqual(ast);
+      expect(root.raws.codeAfter).toEqual('`;\n      ');
+      expect(ast.source!.start).toEqual({
+        line: 1,
+        column: 1,
+        offset: 0,
+      });
+      expect(ast.source!.input.css).toEqual(source);
+    });
+
+    it('should parse styled api with props', () => {
+      const { source, ast } = createTestAst(`
+        const StyledSpan = styled.span\`
+          color: \${(props) => props.color};
+        \`;
+      `);
+      expect(ast.nodes.length).toEqual(1);
+      const root = ast.nodes[0] as Root;
+      const color = root.nodes[0] as Declaration;
+      expect(ast.type).toEqual('document');
+      expect(root.type).toEqual('root');
+      expect(color.type).toEqual('decl');
+      expect(root.raws.codeBefore).toEqual(
+        '\n        const StyledSpan = styled.span`\n'
+      );
+      expect(root.parent).toEqual(ast);
+      expect(root.raws.codeAfter).toEqual('`;\n      ');
+      expect(ast.source!.start).toEqual({
+        line: 1,
+        column: 1,
+        offset: 0,
+      });
+      expect(ast.source!.input.css).toEqual(source);
     });
 
     it('should ignore non-css templates', () => {

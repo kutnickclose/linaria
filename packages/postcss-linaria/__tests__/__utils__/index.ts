@@ -59,6 +59,11 @@ export const sourceWithExpression = {
       $\{expr}
     \`;
   `,
+  singleLineRuleset: `
+    css\`
+      \${expr0} { \${expr1}: \${expr2} }
+    \`
+  `,
   selectorOrAtRule: `
     const expr = '@media (min-width: 100px)';
     css\`
